@@ -1,101 +1,115 @@
-import Image from "next/image";
+"use client"
+
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin, { Draggable, DropArg} from "@fullcalendar/interaction";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import { useEffect, useState } from "react";
+
+interface Event {
+  title: string;
+  start: Date | string;
+  allDay: boolean;
+  id: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [events, setEvents] = useState([
+    {title: 'event 1', id: '1'},
+    {title: 'event 2', id: '2'},
+    {title: 'event 3', id: '3'},
+    {title: 'event 4', id: '4'},
+    {title: 'event 5', id: '5'}
+  ])
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const [allEvents, setAllEvents] = useState<Event[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [idToDelete, setIdToDelete] = useState<number | null>(null)
+  const [newEvent, setNewEvent] = useState<Event>({
+    title: '',
+    start: '',
+    allDay: false,
+    id: 0
+  })
+
+  useEffect(() => {
+    let draggableEl = document.getElementById('draggable-el')
+    if (draggableEl) {
+      new Draggable(draggableEl, {
+        itemSelector: ".fc-event",
+        eventData: function(eventEl) {
+          let title = eventEl.getAttribute("title")
+          let id = eventEl.getAttribute("data")
+          let start = eventEl.getAttribute("start")
+          return {title, id, start}
+        }
+      })
+    }
+  }, [])
+
+  function handleDateClick(arg: {date: Date, allDay: boolean}) {
+    setNewEvent({...newEvent, start: arg.date, allDay: arg.allDay, id: new Date().getTime()})
+    setShowModal(true)
+  }
+
+  function addEvent(data: DropArg) {
+    console.log("DATA", data)
+    const event = {...newEvent, start: data.date.toISOString(), title: data.draggedEl.innerText, allDay: data.allDay, id:new Date().getTime()}
+    setAllEvents([...allEvents, event])
+  }
+
+  function handleDeleteModal(data: {event: {id:string}}){
+    setShowDeleteModal(true)
+    setIdToDelete(Number(data.event.id))
+  }
+
+
+  return (
+    <>
+    <nav className="flex justify-between mb-12 border-b border-violet-100 p-4">
+      <h1 className="font-bold text-2xl text-gray-700 text-justify-center">Calendar</h1>
+    </nav>
+      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
+       <div className="grid grid-cols-10">
+        <div className="col-span-8">
+          <FullCalendar
+            plugins={[
+              dayGridPlugin,
+              interactionPlugin,
+              timeGridPlugin,
+            ]}
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'resourceTimelineWook, dayGridMonth, timeGridWeek'
+            }}
+            events={{allEvents}}
+            nowIndicator={true}
+            editable={true}
+            droppable={true}
+            selectable={true}
+            selectMirror={true}
+            dateClick={handleDateClick}
+            drop={(data) => addEvent(data)}
+            eventClick={(data) => handleDeleteModal(data)}
+          />
         </div>
+        <div id="draggable-el" className="ml-8 w-full border-2 p-2 rounded-md mt-16 lg:h-1/2 bg-violet-50">
+            <h1 className="font-bold text-lg text-center">Drag Event</h1>
+            {events.map(event => (
+              <div
+                className="fc-event border-2 p-1 m-2 w-full rounded-md ml-auto text-center bg-white"
+                title={event.title}
+                key={event.id}
+              >
+                {event.title}
+              </div>
+            ))}
+        </div>
+       </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    </>
+
   );
 }
